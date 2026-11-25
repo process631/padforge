@@ -336,6 +336,14 @@ button[title], select[title], .bubble[title], [role=tab][title] { cursor: pointe
 .note { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; padding: 9px 12px; border-radius: 10px; margin-bottom: 10px; line-height: 1.45; }
 .note.warn { color: #f5d27a; background: rgba(251, 191, 36, .08); border: 1px solid rgba(251, 191, 36, .25); }
 .note .ic { margin-top: 1px; }
+.diag-box { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; }
+.diag-box b { display: block; color: var(--text); margin-bottom: 2px; }
+.diag-box span { color: #c9d1ea; }
+.diag-box .ic { margin-top: 2px; flex-shrink: 0; }
+.diag-box.info { background: var(--accent-soft); border: 1px solid rgba(75, 139, 255, .4); }
+.diag-box.info .ic { color: var(--accent); }
+.diag-box.warn { background: rgba(251, 191, 36, .08); border: 1px solid rgba(251, 191, 36, .35); }
+.diag-box.warn .ic { color: var(--warn); }
 
 /* ---------------- toasts ---------------- */
 .toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }

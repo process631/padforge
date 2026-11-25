@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { execFile } = require('child_process');
+const { summarizePnp } = require('../shared/pnp.mjs');
 
 const SONY_VID = 0x054c;
 const SELFTEST = process.env.PADFORGE_SELFTEST === '1';
@@ -187,6 +188,14 @@ ipcMain.handle('sys:conflicts', async () => {
   const apps = CONFLICT_APPS.filter(a => a.exe.some(e => running.has(e))).map(a => ({ name: a.name }));
   const [hidusbf, HidHide, ViGEmBus] = await Promise.all(['hidusbf', 'HidHide', 'ViGEmBus'].map(serviceState));
   return { apps, services: { hidusbf, HidHide, ViGEmBus } };
+});
+
+// What Windows itself sees (HID entries for Sony devices and game controllers). Read-only.
+ipcMain.handle('sys:usbScan', async () => {
+  if (SELFTEST) return summarizePnp([{ InstanceId: 'HID\\VID_054C&PID_0DF2&MI_03\\7&TEST&0&0000', Status: 'OK' }]);
+  const ps = "Get-PnpDevice -PresentOnly -Class HIDClass | Where-Object { $_.InstanceId -match '054C' -or $_.FriendlyName -match 'game controller' } | Select-Object Status, InstanceId | ConvertTo-Json -Compress";
+  const out = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps]);
+  try { return summarizePnp(JSON.parse(out || '[]')); } catch { return []; }
 });
 
 /* ---------------- self-test (PADFORGE_SELFTEST=1) ---------------- */

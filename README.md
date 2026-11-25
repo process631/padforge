@@ -18,7 +18,7 @@
 ## Download
 
 1. Open the **[latest release](https://github.com/process631/padforge/releases/latest)**.
-2. Download **`PadForge-1.3.0-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.3.0.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
+2. Download **`PadForge-1.3.1-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.3.1.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
 3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info → Run anyway**.
 4. Plug in your controller with a USB cable. PadForge connects automatically.
 
@@ -75,7 +75,7 @@ Model, connection, battery, firmware version, a vibration test, and a live teste
 | The browser blocks the download | Choose **Keep** on the download. Unsigned apps are flagged as uncommon. |
 | Antivirus deletes or blocks the file | It's a false positive that's common for unsigned apps. Restore it from quarantine or allow it, or use the installer instead of the portable file. |
 | *"Smart App Control blocked an app"* (Windows 11) | Smart App Control blocks every app that isn't code-signed and has no Run anyway button, so PadForge can't run on that PC until it's signed. |
-| Controller not found | Click **Not connecting?** in the app. Use a USB **data** cable plugged straight into the PC. Close Steam, DSX, DS4Windows and reWASD, which can take over the controller. Then unplug the controller and plug it back in. |
+| Controller not found | Click **Not connecting?** in the app. It checks what Windows itself sees and tells you the cause: a charge-only cable or bad port, another app holding the controller (Steam, DSX, DS4Windows, reWASD, HidHide), or a controller PadForge doesn't support. PadForge keeps retrying, so it connects by itself once the cause is fixed. |
 | Can't edit profiles | Profiles need a **DualSense Edge** on **USB**. A regular DualSense or a Bluetooth connection can't do it. Empty slots must be created once in PlayStation Accessories. |
 | Picked 2000/4000/8000 Hz but it stays at 1000 Hz | The target only sets a goal. PadForge can't raise the rate by itself: going higher needs the hidusbf driver (see the Overclock tab). The DualSense Edge runs at 1000 Hz natively and doesn't produce new data faster than that, so 1000 Hz is its realistic maximum. |
 | Anything else | **Device → Export diagnostics** saves a problem report (no personal information). [Open an issue](https://github.com/process631/padforge/issues) with that file and a screenshot. |

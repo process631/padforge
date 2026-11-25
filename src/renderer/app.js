@@ -7,6 +7,7 @@ import { Controller } from './device.js';
 import { History } from './history.js';
 import { KEYS, WIRE, formatHex32, formatUpdateVersion } from '../shared/dualsense.mjs';
 import * as Edge from '../shared/edge.mjs';
+import { diagnose } from '../shared/pnp.mjs';
 import { createMockHID } from './mock.js';
 import { runSelfTest } from './selftest.js';
 
@@ -370,29 +371,43 @@ function renderBanner() {
   }
 }
 
-/** Step-by-step help when no controller shows up, with a live check for apps that grab the controller. */
+/**
+ * "Controller not connecting" help: asks Windows what it sees and which apps could hold the controller,
+ * then names the most likely cause. Closes itself as soon as the controller connects.
+ */
+let helpModal = null;
 function showConnectHelp() {
+  if (helpModal) return;
   const body = document.createElement('div');
-  body.innerHTML = `<p>PadForge can't see a Sony controller yet. These fix almost every case:</p>
+  body.innerHTML = `<div class="diag-box info" data-x="diag">${icon('refresh', 16)}<div><b>Checking what Windows sees…</b></div></div>
+    <p>These steps fix almost every case:</p>
     <ol class="steps">
       <li><div><b>Use a USB data cable.</b> Some cables only charge. Use the one that came with the controller, plugged straight into the PC rather than a hub or keyboard port.</div></li>
       <li><div><b>Close apps that take over the controller.</b> <span data-x="apps">Checking this PC…</span></div></li>
       <li><div><b>Unplug the controller, wait 3 seconds, and plug it back in.</b> PadForge connects by itself when it appears.</div></li>
       <li><div><b>Still nothing?</b> Export a problem report from the <b>Device</b> tab (Export diagnostics) and send it with a screenshot.</div></li>
     </ol>`;
-  const m = openModal({
+  const m = helpModal = openModal({
     title: 'Controller not connecting', body,
     actions: [{ text: 'Close', value: false, role: 'cancel' }, { text: 'Try again', value: true, role: 'confirm', kind: 'primary' }],
-    onClose: retry => { if (retry) connect(); },
+    onClose: retry => { helpModal = null; if (retry) connect(); },
   });
-  api.conflicts().then(r => {
+  Promise.all([api.usbScan().catch(() => []), api.conflicts().catch(() => null)]).then(([devices, r]) => {
+    const d = diagnose(devices, r);
+    S.lastDiag = { devices, conflicts: r, diagnosis: d, when: new Date().toISOString() };
+    log('info', `Troubleshooter: ${d.cause}; Windows sees ${devices.map(x => `${x.model}/${x.transport}/${x.status}`).join(', ') || 'no controller'}`);
+    const diag = $('[data-x=diag]', m.body);
+    if (diag) {
+      diag.className = `diag-box ${d.kind}`;
+      diag.innerHTML = `${icon(d.kind === 'info' ? 'info' : 'alert', 16)}<div><b>${esc(d.title)}</b><span>${esc(d.text)}</span></div>`;
+    }
     const el = $('[data-x=apps]', m.body);
     if (!el) return;
     const found = [...(r?.apps || []).map(a => a.name), ...(r?.services?.HidHide && r.services.HidHide !== 'not-installed' ? ['HidHide (it can hide the controller from apps)'] : [])];
     el.innerHTML = found.length
       ? `Found on this PC: <b>${found.map(esc).join(', ')}</b>. Close them fully, including from the system tray, then try again.`
       : 'None found running right now (Steam, DSX, DS4Windows, reWASD, HidHide), so this is probably not the cause.';
-  }).catch(() => {});
+  });
 }
 
 function renderDevice() {
@@ -464,6 +479,7 @@ function flushLive() {
 
 ctl.addEventListener('change', () => {
   renderStatus(); renderBanner();
+  if (ctl.connected && helpModal) { helpModal.close(false); toast(`${ctl.model} connected`, 'success'); }
   if (!ctl.connected) {
     meter.reset(); diagram.clearLive(); latest = null; S.ocAtTarget = null;
     S.liveRate = null; renderSpeed(); renderStatus();
@@ -509,6 +525,14 @@ setInterval(() => {
   const rate = st && st.hz >= 900 && fresh >= 900 ? nominalRate(low) : null;
   if (rate !== S.liveRate) { S.liveRate = rate; renderStatus(); renderSpeed(); }
 }, 1000);
+
+// Keep looking for the controller while none is connected. Windows sends no "plugged in" event when
+// another app (Steam, DS4Windows…) lets go of a controller, so retry quietly every few seconds.
+let retryNoted = false;
+setInterval(() => {
+  if (ctl.connected || ctl.connecting) return;
+  ctl.connect(false).catch(e => { if (!retryNoted) { retryNoted = true; log('warn', `Background connect failed: ${e.message}`); } });
+}, 2500);
 
 /* ======================= overclock ======================= */
 // Once the controller is measured at the target rate over USB, the overclock steps are folded away.
@@ -753,6 +777,9 @@ async function exportDiagnostics() {
     device: ctl.connected ? { model: ctl.model, productId: ctl.dev.productId, productName: ctl.dev.productName, transport: ctl.transport, firmware: ctl.firmware, battery: ctl.battery } : null,
     slots: S.slots?.map(s => ({ name: s.name, selector: s.selector, readId: s.readId, assigned: s.assigned, crcOk: s.crcOk, label: s.label, map: s.map, sticks: s.sticks, triggers: s.triggers, chunks: s.chunks })) ?? null,
     polling: meter.stats(2000), benchmark: S.bench,
+    windowsSees: await api.usbScan().catch(() => null),
+    conflicts: await api.conflicts().catch(() => null),
+    troubleshooter: S.lastDiag ?? null,
   };
   const f = await api.saveDiagnostics(payload);
   if (f) toast('Diagnostics saved', 'success');

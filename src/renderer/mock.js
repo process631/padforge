@@ -86,5 +86,7 @@ export function createMockHID() {
     corruptCrc(readId) { reports[readId + 2][56] ^= 0xff; },
     setRate(hz) { perTick = Math.max(1, Math.round(hz / 250)); },
     disconnect() { dev.close(); dev.opened = null; listeners.disconnect.forEach(f => f({ device: dev })); },
+    // The controller becomes reachable again without a "connect" event, like when another app releases it.
+    release() { dev.opened = false; },
   };
 }

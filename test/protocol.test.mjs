@@ -2,6 +2,29 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DS from '../src/shared/dualsense.mjs';
 import * as Edge from '../src/shared/edge.mjs';
+import { describePnp, summarizePnp, diagnose } from '../src/shared/pnp.mjs';
+
+test('describePnp reads USB and Bluetooth instance IDs and drops serial numbers', () => {
+  const usb = describePnp({ InstanceId: 'HID\\VID_054C&PID_0DF2&MI_03\\7&1A2B3C4D&0&0000', Status: 'OK' });
+  assert.deepEqual(usb, { model: 'DualSense Edge', vid: '054C', pid: '0DF2', transport: 'USB', status: 'OK', sony: true, supported: true });
+  const bt = describePnp({ InstanceId: 'HID\\{00001124-0000-1000-8000-00805f9b34fb}_VID&0002054c_PID&0ce6\\9&AABBCCDDEEFF&0&0000', Status: 'OK' });
+  assert.equal(bt.model, 'DualSense'); assert.equal(bt.transport, 'Bluetooth');
+  assert.ok(!JSON.stringify(bt).includes('AABBCC'));
+  assert.equal(describePnp({ InstanceId: 'HID\\VID_054C&PID_09CC\\x', Status: 'OK' }).supported, false);
+  assert.equal(describePnp({ InstanceId: 'HID\\VID_2DC8&PID_6012\\x', Status: 'OK' }).sony, false);
+  assert.equal(describePnp({ InstanceId: 'ROOT\\SYSTEM\\0001' }), null);
+});
+
+test('diagnose names the cause of a missing controller', () => {
+  const edge = summarizePnp([{ InstanceId: 'HID\\VID_054C&PID_0DF2&MI_03\\a', Status: 'OK' }, { InstanceId: 'HID\\VID_054C&PID_0DF2&MI_03&COL02\\b', Status: 'OK' }]);
+  assert.equal(edge.length, 1);
+  assert.equal(diagnose([], null).cause, 'not-visible');
+  assert.equal(diagnose(edge, { apps: [{ name: 'Steam' }], services: {} }).cause, 'blocked');
+  assert.match(diagnose(edge, { apps: [{ name: 'Steam' }], services: {} }).text, /Steam/);
+  assert.equal(diagnose(summarizePnp([{ InstanceId: 'HID\\VID_054C&PID_0DF2\\a', Status: 'Error' }]), null).cause, 'device-error');
+  assert.equal(diagnose(summarizePnp([{ InstanceId: 'HID\\VID_054C&PID_05C4\\a', Status: 'OK' }]), null).cause, 'unsupported');
+  assert.equal(diagnose(summarizePnp([{ InstanceId: 'HID\\VID_2DC8&PID_6012\\a', Status: 'OK' }]), null).cause, 'not-sony');
+});
 
 const blankChunks = readId => [0, 1, 2].map(k => { const a = new Array(64).fill(0); a[0] = readId + k; return a; });
 const asRead = (slot, bufs) => bufs.map((b, k) => { const a = Array.from(b); a[0] = slot.readId + k; return a; });

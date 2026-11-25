@@ -202,13 +202,20 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     await wait(400);
     check('handles a disconnect', !ctl.connected && $('#writeEdge').disabled && /No controller/.test($('#status').textContent));
     check('shows the connection banner when disconnected', getComputedStyle($('#banner')).display !== 'none');
-    $('#banner [data-action=help]').click();
-    await until(() => /DS4Windows/.test($('.modal-backdrop')?.textContent || ''));
-    check('troubleshoots a missing controller, including apps that grab it', /USB data cable/.test($('.modal-backdrop').textContent) && /DS4Windows/.test($('.modal-backdrop').textContent));
-    await shot('not-connecting');
-    await answer('cancel');
     check('keeps unsaved edits across a disconnect', S.work.label === 'Café ☆ Pro');
     await shot('disconnected');
+    $('#banner [data-action=help]').click();
+    await until(() => /Windows sees your/.test($('.modal-backdrop')?.textContent || ''));
+    const help = $('.modal-backdrop')?.textContent || '';
+    check('troubleshooter checks what Windows sees', /Windows sees your DualSense Edge \(USB\), so the cable and port are fine/.test(help), help.slice(0, 200));
+    check('troubleshooter names the app holding the controller', /holding or hiding it: DS4Windows/.test(help) && /USB data cable/.test(help));
+    await shot('not-connecting');
+    // The controller becomes free again without any plug-in event (like closing DS4Windows).
+    mock.release();
+    await until(() => ctl.connected && !$('.modal-backdrop'), 9000);
+    check('reconnects by itself and closes the help', ctl.connected && !$('.modal-backdrop') && /connected/.test($('#toasts').textContent));
+    await until(() => S.slots && !S.busy, 5000);
+    check('reads profiles again after reconnecting', S.slots?.length === 4);
   } catch (e) {
     check('no exceptions', false, e.stack);
   }

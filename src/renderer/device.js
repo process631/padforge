@@ -37,8 +37,12 @@ export class Controller extends EventTarget {
   async doConnect(interactive) {
     let devs = (await this.hid.getDevices()).filter(d => d.vendorId === SONY_VID);
     if (!devs.length && interactive) devs = await this.hid.requestDevice({ filters: [{ vendorId: SONY_VID }] });
-    const dev = devs.find(d => d.productId === PID.DUALSENSE_EDGE) || devs.find(d => d.productId === PID.DUALSENSE) || devs[0];
-    if (!dev) return false;
+    const dev = devs.find(d => d.productId === PID.DUALSENSE_EDGE) || devs.find(d => d.productId === PID.DUALSENSE);
+    if (!dev) {
+      // Only Sony devices PadForge can't drive (for example a PS4 DualShock 4) are present.
+      if (devs.length && interactive) throw new Error(`${devs[0].productName || 'This Sony controller'} isn't supported. PadForge works with the PS5 DualSense and DualSense Edge.`);
+      return false;
+    }
     if (this.dev && this.dev !== dev) this.dev.oninputreport = null;
     try {
       if (!dev.opened) await dev.open();

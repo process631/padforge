@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('api', {
   launchOcTool: invoke('oc:launch'),
   ocStatus: invoke('oc:status'),
   conflicts: invoke('sys:conflicts'),
+  usbScan: invoke('sys:usbScan'),
   selftestCapture: invoke('selftest:capture'),
   selftestDone: r => ipcRenderer.send('selftest:done', r),
 });
