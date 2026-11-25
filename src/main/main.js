@@ -165,6 +165,30 @@ ipcMain.handle('oc:status', () => new Promise(resolve => {
   });
 }));
 
+// Things on this PC that can interfere with the controller or leave an old overclock behind (read-only checks).
+const CONFLICT_APPS = [
+  { exe: ['dsx.exe', 'dualsensex.exe'], name: 'DSX (DualSenseX)' },
+  { exe: ['ds4windows.exe'], name: 'DS4Windows' },
+  { exe: ['rewasd.exe', 'rewasdengine.exe', 'rewasdtray.exe'], name: 'reWASD' },
+  { exe: ['steam.exe'], name: 'Steam' },
+  { exe: ['x360ce.exe'], name: 'x360ce' },
+];
+const run = (cmd, args) => new Promise(resolve => execFile(cmd, args, { windowsHide: true, timeout: 8000 }, (err, out) => resolve(err ? '' : String(out))));
+const serviceState = async name => {
+  const out = await run('sc.exe', ['query', name]);
+  return !/STATE/.test(out) ? 'not-installed' : /RUNNING/.test(out) ? 'running' : 'installed';
+};
+ipcMain.handle('sys:conflicts', async () => {
+  if (SELFTEST) {
+    return { apps: [{ name: 'DS4Windows' }], services: { hidusbf: 'running', HidHide: 'not-installed', ViGEmBus: 'installed' } };
+  }
+  const tasks = (await run('tasklist.exe', ['/fo', 'csv', '/nh'])).toLowerCase();
+  const running = new Set([...tasks.matchAll(/^"([^"]+)"/gm)].map(m => m[1]));
+  const apps = CONFLICT_APPS.filter(a => a.exe.some(e => running.has(e))).map(a => ({ name: a.name }));
+  const [hidusbf, HidHide, ViGEmBus] = await Promise.all(['hidusbf', 'HidHide', 'ViGEmBus'].map(serviceState));
+  return { apps, services: { hidusbf, HidHide, ViGEmBus } };
+});
+
 /* ---------------- self-test (PADFORGE_SELFTEST=1) ---------------- */
 const consoleLog = [];
 ipcMain.handle('selftest:capture', async (_e, name) => {

@@ -155,6 +155,13 @@
         </ol>
         <p class="hint">Windows Memory Integrity can block unsigned drivers; hidusbf's readme explains the options. Overclocking only affects USB, and you can undo it from the same tool.</p>
       </div>
+
+      <div class="card" id="fresh">
+        <div class="card-head"><h2>Fresh start</h2>
+          <div class="btn-row" style="margin:0"><button class="btn sm" id="scanConflicts" data-icon="refresh">Check again</button><button class="btn sm danger" id="resetAllData" data-icon="reset">Reset everything…</button></div></div>
+        <p class="help">Other overclocking or controller apps can leave an old overclock behind, or grab the controller so PadForge can't use it. This checks your PC for them. <b>Reset everything</b> wipes PadForge's saved settings and can put your controller's profiles back to default, so you start clean.</p>
+        <ul class="checks" id="conflictList"><li class="muted">Checking…</li></ul>
+      </div>
     </div>
   </section>
 

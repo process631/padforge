@@ -18,7 +18,7 @@
 ## Download
 
 1. Open the **[latest release](https://github.com/process631/padforge/releases/latest)**.
-2. Download **`PadForge-1.1.1-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.1.1.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
+2. Download **`PadForge-1.2.0-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.2.0.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
 3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info â†’ Run anyway**.
 4. Plug in your controller with a USB cable. PadForge connects automatically.
 
@@ -43,8 +43,13 @@ Requires Windows 10 or 11 (64-bit).
 - Live polling rate measured two ways: reports received by your PC, and fresh data according to the controller's own clock. The second number reveals overclocks that only repeat old data.
 - Jitter, 99th percentile, missed and repeated reports, a live graph, and a 10-second benchmark with a before/after baseline.
 - Step-by-step guide for [hidusbf](https://github.com/LordOfMice/hidusbf), the USB filter driver used for controller overclocking, with driver detection. PadForge never installs drivers itself.
+- **Fresh start:**
+  - Finds leftovers and conflicts on your PC: an old overclock driver, apps that grab the controller (DSX, DS4Windows, reWASD, Steam) and HidHide.
+  - Walks you through removing an old overclock safely.
+  - **Reset everything** wipes PadForge's settings and presets and puts the controller's profiles back to default. The profiles are backed up first.
 
 <p align="center"><img src="docs/screenshots/overclock.png" alt="Polling rate and benchmark" width="900"></p>
+<p align="center"><img src="docs/screenshots/fresh-start.png" alt="Fresh start: conflict check and reset" width="900"></p>
 
 ### Device
 Model, connection, battery, firmware version, a vibration test, and a live tester for every button, stick and trigger.

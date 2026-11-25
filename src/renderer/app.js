@@ -22,6 +22,7 @@ window.addEventListener('unhandledrejection', e => log('error', `renderer: ${e.r
 const store = {
   get(k, d) { try { const v = localStorage.getItem('pf:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('pf:' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  del(k) { try { localStorage.removeItem('pf:' + k); } catch { /* storage unavailable */ } },
 };
 
 const ctl = new Controller(mock ? mock.hid : navigator.hid, log);
@@ -528,6 +529,113 @@ async function refreshOc() {
   el.innerHTML = s === 'running' ? `${icon('check', 13)}<span>Driver running</span>` : s === 'installed' ? 'Driver installed, not running' : 'Driver not installed';
 }
 
+/* ======================= fresh start ======================= */
+async function scanConflicts() {
+  const list = $('#conflictList');
+  list.innerHTML = '<li class="info">Checking your PC…</li>';
+  let r = null;
+  try { r = await api.conflicts(); } catch (e) { log('warn', `Conflict scan failed: ${e.message}`); }
+  if (!r) { list.innerHTML = `<li class="warn">${icon('alert', 16)}<div><b>Couldn't check this PC</b>Try Check again.</div></li>`; return; }
+  S.conflicts = r;
+  const items = [];
+  const svc = r.services;
+  if (svc.hidusbf !== 'not-installed') {
+    items.push({ kind: 'warn', title: `USB overclock driver (hidusbf) is ${svc.hidusbf === 'running' ? 'active' : 'installed'}`,
+      text: 'An overclock from PadForge or another tool is set up on this PC. To go back to the stock rate, remove it with its own uninstaller.',
+      button: '<button class="btn sm" data-fresh="driver">How to remove</button>' });
+  } else items.push({ kind: 'ok', title: 'No USB overclock driver installed', text: 'Your controller runs at its stock polling rate.' });
+  for (const a of r.apps) {
+    items.push({ kind: 'warn', title: `${a.name} is running`,
+      text: 'It can take over the controller or change its settings while it runs. Close it fully (also from the system tray) before using PadForge.' });
+  }
+  if (!r.apps.length) items.push({ kind: 'ok', title: 'No other controller apps running', text: 'Nothing else is competing for your controller.' });
+  if (svc.HidHide !== 'not-installed') {
+    items.push({ kind: 'warn', title: 'HidHide is installed',
+      text: "It can hide your controller from other apps, including PadForge. If PadForge can't find your controller, turn hiding off in HidHide or allow PadForge there." });
+  }
+  if (svc.ViGEmBus !== 'not-installed') {
+    items.push({ kind: 'info', title: 'ViGEmBus is installed', text: 'A virtual-controller driver used by DS4Windows and DSX. Harmless while those apps are closed.' });
+  }
+  items.sort((a, b) => (a.kind === 'warn' ? 0 : 1) - (b.kind === 'warn' ? 0 : 1));
+  list.innerHTML = items.map(i => `<li class="${i.kind}">${icon(i.kind === 'ok' ? 'check' : i.kind === 'warn' ? 'alert' : 'info', 16)}<div><b>${esc(i.title)}</b>${esc(i.text)}</div>${i.button || ''}</li>`).join('');
+}
+
+function showDriverRemoval() {
+  const body = document.createElement('div');
+  body.innerHTML = `<p>PadForge doesn't remove drivers itself, because doing it wrong can stop USB devices from working. hidusbf's own tool removes it safely:</p>
+    <ol class="steps">
+      <li><div>Open the hidusbf tool (<b>Setup.exe</b>) and approve the admin prompt.</div><button class="btn sm" data-x="open">${toolPath ? 'Open tool' : 'Locate Setup.exe'}</button></li>
+      <li><div>Select your controller, untick <i>Filter on device</i> (or set the rate back to default).</div></li>
+      <li><div>Click <i>Uninstall service</i>, then <i>Restart</i>, so no other device stays overclocked.</div></li>
+      <li><div>Replug the controller and click <b>Check again</b>. The polling rate should read about 250 Hz.</div></li>
+    </ol>
+    <p class="muted">Don't have the tool anymore? <a class="link" data-x="download">Download hidusbf</a> again and use its uninstaller.</p>`;
+  body.addEventListener('click', async e => {
+    const x = e.target.closest('[data-x]')?.dataset.x;
+    if (x === 'download') api.openLink('hidusbf');
+    if (x === 'open') {
+      if (!toolPath) { const p = await api.pickOcTool(); if (!p) return; toolPath = p; store.set('ocTool', p); renderTool(); e.target.closest('button').textContent = 'Open tool'; }
+      const r = await api.launchOcTool(toolPath);
+      if (r) toast(r, 'error');
+    }
+  });
+  openModal({ title: 'Remove the overclock driver', body, actions: [{ text: 'Done', value: true, role: 'confirm', kind: 'primary' }], onClose: () => scanConflicts() });
+}
+
+function resetEverything() {
+  const profilesOk = canOnboard() && S.slots?.some(s => s.assigned && s.crcOk);
+  const body = document.createElement('div');
+  body.innerHTML = `<p>Choose what to reset. This can't be undone, except controller profiles, which are backed up first.</p>
+    <div class="opt-list">
+      <label class="opt-check"><input type="checkbox" id="rsSettings" checked><span><b>PadForge settings</b><small>Benchmark results and baseline, the overclock tool location and target rate.</small></span></label>
+      <label class="opt-check"><input type="checkbox" id="rsPresets"><span><b>Presets saved on this PC</b><small>Deletes every saved preset. Preset files you exported are not touched.</small></span></label>
+      <label class="opt-check${profilesOk ? '' : ' disabled'}"><input type="checkbox" id="rsProfiles" ${profilesOk ? '' : 'disabled'}><span><b>Controller profiles back to default</b><small>${profilesOk
+        ? 'Every used slot gets default buttons, linear sticks and the full trigger range. Names are kept. All four slots are backed up first.'
+        : 'Connect a DualSense Edge with a USB cable to include this.'}</small></span></label>
+    </div>
+    <p class="muted">To remove an overclock driver, use <b>How to remove</b> in the Fresh start list.</p>`;
+  openModal({
+    title: 'Reset everything?', body, className: 'narrow', initialFocus: '[data-dialog=cancel]',
+    actions: [{ text: 'Cancel', value: false, role: 'cancel' }, { text: 'Reset', value: true, role: 'confirm', kind: 'danger' }],
+    onClose: ok => { if (ok) doReset({ settings: $('#rsSettings', body).checked, presets: $('#rsPresets', body).checked, profiles: $('#rsProfiles', body).checked }); },
+  });
+}
+
+async function doReset({ settings, presets, profiles }) {
+  const done = [];
+  if (settings) {
+    ['bench', 'benchBase', 'ocTool', 'target'].forEach(k => store.del(k));
+    S.bench = null; S.benchBase = null; toolPath = null;
+    $('#target').value = '1000';
+    meter.reset();
+    renderBench(); renderTool();
+    done.push('PadForge settings');
+  }
+  if (presets) {
+    S.presets = [];
+    await api.savePresets([]);
+    renderPresets();
+    done.push('saved presets');
+  }
+  if (profiles && canOnboard() && S.slots) {
+    const targets = S.slots.filter(s => s.assigned && s.crcOk);
+    setBusy(true, 'Resetting profiles…');
+    try {
+      await api.saveBackup({ format: 'padforge-backup', when: Date.now(), firmware: ctl.firmware, slots: S.slots.map(({ selector, name, chunks }) => ({ selector, name, chunks })) });
+      for (const s of targets) await Edge.writeProfile(ctl.dev, s, Edge.defaultProfile(s.label || s.name));
+      S.busy = false;
+      await readEdge({ silent: true });
+      done.push(`${targets.length} controller profile${targets.length === 1 ? '' : 's'}`);
+      const skipped = S.slots.filter(s => s.assigned && !s.crcOk).length;
+      if (skipped) toast(`${skipped} profile${skipped > 1 ? 's' : ''} with unrecognized data ${skipped > 1 ? 'were' : 'was'} left untouched.`);
+    } catch (e) {
+      toast(`Resetting controller profiles failed: ${e.message}. Restore backup can undo it.`, 'error', 7000);
+      log('error', `Profile reset failed: ${e.message}`);
+    } finally { setBusy(false); }
+  }
+  if (done.length) { toast(`Reset ${done.join(', ')}.`, 'success'); log('info', `Fresh start: reset ${done.join(', ')}`); }
+}
+
 /* ======================= about & diagnostics ======================= */
 async function renderAbout() {
   const i = await api.info();
@@ -569,7 +677,7 @@ function showView(v) {
     b.tabIndex = on ? 0 : -1;
   });
   $$('.view').forEach(el => el.classList.toggle('active', el.id === `view-${v}`));
-  if (v === 'overclock') refreshOc();
+  if (v === 'overclock') { refreshOc(); scanConflicts(); }
   if (v === 'device') renderDevice();
 }
 
@@ -617,6 +725,9 @@ $('#rumble').onclick = async () => {
   try { await ctl.rumble(); } catch (e) { toast(`Vibration test failed: ${e.message}`, 'error'); log('warn', `Rumble failed: ${e.message}`); }
 };
 $('#benchRun').onclick = runBenchmark;
+$('#scanConflicts').onclick = scanConflicts;
+$('#resetAllData').onclick = resetEverything;
+$('#conflictList').addEventListener('click', e => { if (e.target.closest('[data-fresh=driver]')) showDriverRemoval(); });
 $('#getTool').onclick = () => api.openLink('hidusbf');
 $('#pickTool').onclick = async () => { const p = await api.pickOcTool(); if (p) { toolPath = p; store.set('ocTool', p); renderTool(); } };
 $('#launchTool').onclick = async () => { const r = await api.launchOcTool(toolPath); if (r) toast(r, 'error'); };

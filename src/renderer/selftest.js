@@ -137,6 +137,28 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     check('benchmark sees fresh data at 250 Hz', S.bench && Math.abs(S.bench.ctrlHz - 250) < 3, S.bench?.ctrlHz?.toFixed(2));
     await shot('overclock');
 
+    // Fresh start: conflicts, driver guide, reset everything
+    await until(() => /DS4Windows is running/.test($('#conflictList').textContent));
+    check('finds conflicting apps and overclock drivers', /DS4Windows is running/.test($('#conflictList').textContent) && /hidusbf/.test($('#conflictList').textContent), $('#conflictList').textContent);
+    $('[data-fresh=driver]').click();
+    await until(() => $('.modal-backdrop'));
+    check('explains how to remove the driver safely', /Uninstall service/.test($('.modal-backdrop').textContent));
+    await answer('confirm');
+    $('#fresh').scrollIntoView();
+    await shot('fresh-start');
+    $('#resetAllData').click();
+    await until(() => $('#rsProfiles'));
+    check('offers to reset controller profiles over USB', !$('#rsProfiles').disabled);
+    $('#rsPresets').checked = true;
+    $('#rsProfiles').checked = true;
+    await shot('reset-dialog');
+    await answer('confirm');
+    await until(() => /Reset PadForge settings/.test($('#toasts').textContent), 10000);
+    const reset = slotData(0x73);
+    check('reset puts controller profiles back to default', reset.map.every((v, i) => v === i) && reset.triggers.flat().join() === '0,255,0,255' && reset.sticks.every(s => s.preset === 0) && reset.label === 'Café ☆ Pro', JSON.stringify({ map: reset.map, label: reset.label }));
+    check('reset leaves unrecognized profiles alone', slotData(0x70).label === '<i>FPS</i>');
+    check('reset clears saved settings and presets', !S.bench && S.presets.length === 0 && /Run a test/.test($('#benchOut').textContent));
+
     // Disconnect
     showView('customize');
     mock.disconnect();
