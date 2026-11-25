@@ -14,7 +14,13 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
   const dialog = role => document.querySelector(`.modal-backdrop [data-dialog="${role}"]`);
   const answer = async role => { await until(() => dialog(role)); dialog(role).click(); await until(() => !$('.modal-backdrop')); };
   const set = (sel, v, events = ['input', 'change']) => { const el = $(sel); el.value = String(v); events.forEach(t => el.dispatchEvent(new Event(t, { bubbles: true }))); };
-  const shot = async name => { await wait(300); await api.selftestCapture(name); };
+  const shot = async name => {
+    const toasts = $('#toasts');
+    toasts.style.visibility = 'hidden';            // keep notifications out of screenshots
+    await wait(300);
+    await api.selftestCapture(name);
+    toasts.style.visibility = '';
+  };
   const slotData = readId => Edge.decode([0, 1, 2].map(k => mock.reports[readId + k]));
   const clickBubble = k => $(`.bubble[data-k="${k}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const pick = async (key, target, capture) => {
@@ -57,6 +63,12 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     clickBubble('PS');
     await wait(200);
     check('fixed buttons cannot be remapped', !$('.modal-backdrop') && /PS button/.test($('#toasts').textContent));
+
+    check('Balanced setup is active for a default profile', $('[data-setup=balanced]').classList.contains('active'));
+    $('[data-setup=competitive]').click();
+    check('Competitive setup applies hair triggers and fast sticks', S.work.triggers.flat().join() === '0,102,0,102' && S.work.sticks.map(s => `${s.preset}:${s.step}`).join() === '1:5,5:5', JSON.stringify(S.work.sticks.map(s => [s.preset, s.step])));
+    check('setups keep button assignments and show as active', S.work.map[WIRE.CROSS] === WIRE.TRIANGLE && $('[data-setup=competitive]').classList.contains('active') && !$('[data-setup=balanced]').classList.contains('active'));
+    await shot('setups');
 
     set('#pname', 'Café ☆ Pro');
     set('#lPreset', 2, ['change']);
@@ -168,12 +180,33 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     check('reset leaves unrecognized profiles alone', slotData(0x70).label === '<i>FPS</i>');
     check('reset clears saved settings and presets', !S.bench && S.presets.length === 0 && /Run a test/.test($('#benchOut').textContent));
 
+    // Full-speed badge (simulated controller switched to 1000 Hz)
+    check('no speed badge at the stock rate', $('#speedBadge').hidden && !/Hz/.test($('#status').textContent));
+    mock.setRate(1000);
+    await until(() => !$('#speedBadge').hidden, 8000);
+    check('shows the full-speed badge at 1000 Hz', /Full speed: 1000 Hz/.test($('#sbTitle').textContent) && /4× faster/.test($('#sbText').textContent) && /every 1 ms/.test($('#sbText').textContent), `${$('#sbTitle').textContent} | ${$('#sbText').textContent}`);
+    check('shows the measured rate in the header', /1000 Hz/.test($('#status').textContent), $('#status').textContent);
+    document.querySelector('#view-overclock .page').scrollTop = 0;
+    await shot('full-speed');
+    set('#target', 4000, ['change']);
+    await wait(700);
+    check('explains that 4000 Hz needs a driver and may not be possible', /can't raise the rate by itself/.test($('#verdict').textContent) && /1000 Hz/.test($('#verdict').textContent), $('#verdict').textContent);
+    set('#target', 1000, ['change']);
+    mock.setRate(250);
+    await until(() => $('#speedBadge').hidden, 8000);
+    check('removes the badge when the rate drops', $('#speedBadge').hidden && !/Hz/.test($('#status').textContent));
+
     // Disconnect
     showView('customize');
     mock.disconnect();
     await wait(400);
     check('handles a disconnect', !ctl.connected && $('#writeEdge').disabled && /No controller/.test($('#status').textContent));
     check('shows the connection banner when disconnected', getComputedStyle($('#banner')).display !== 'none');
+    $('#banner [data-action=help]').click();
+    await until(() => /DS4Windows/.test($('.modal-backdrop')?.textContent || ''));
+    check('troubleshoots a missing controller, including apps that grab it', /USB data cable/.test($('.modal-backdrop').textContent) && /DS4Windows/.test($('.modal-backdrop').textContent));
+    await shot('not-connecting');
+    await answer('cancel');
     check('keeps unsaved edits across a disconnect', S.work.label === 'Café ☆ Pro');
     await shot('disconnected');
   } catch (e) {

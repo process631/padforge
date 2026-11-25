@@ -28,14 +28,14 @@ export function createMockHID() {
   fw[44] = 0x19; fw[45] = 0x02;
   reports[0x20] = fw;
 
-  let timer = null, seq = 0, sensor = 0, n = 0;
+  let timer = null, seq = 0, sensor = 0, n = 0, perTick = 1;
   const dev = {
     vendorId: 0x054c, productId: 0x0df2, productName: 'DualSense Edge Wireless Controller',
     opened: false, oninputreport: null, featureWrites: 0,
     async open() {
       this.opened = true;
       clearInterval(timer);
-      timer = setInterval(() => {
+      const emit = timeStamp => {
         n++;
         const d = new Uint8Array(63);
         d[0] = 128 + Math.round(70 * Math.sin(n / 40)); d[1] = 128 + Math.round(70 * Math.cos(n / 40));
@@ -43,10 +43,15 @@ export function createMockHID() {
         d[4] = (n * 2) & 0xff; d[5] = 0; d[6] = seq = (seq + 1) & 0xff;
         d[7] = 0x08 | ((n % 300) < 30 ? 0x20 : 0);           // hat released; Cross pressed now and then
         d[9] = (n % 500) < 25 ? 0x40 : 0;                     // left back button now and then
-        sensor = (sensor + 12000) >>> 0;                      // 4 ms in 1/3 microsecond units
+        sensor = (sensor + 12000 / perTick) >>> 0;            // report interval in 1/3 microsecond units
         new DataView(d.buffer).setUint32(27, sensor, true);
         d[52] = 0x15;                                         // charging, level 5 (55 %)
-        this.oninputreport?.({ reportId: 0x01, data: new DataView(d.buffer), timeStamp: performance.now() });
+        this.oninputreport?.({ reportId: 0x01, data: new DataView(d.buffer), timeStamp });
+      };
+      // Timers tick every 4 ms at best, so faster rates emit several evenly spaced reports per tick.
+      timer = setInterval(() => {
+        const now = performance.now();
+        for (let j = perTick - 1; j >= 0; j--) emit(now - j * (4 / perTick));
       }, 4);
     },
     async close() { this.opened = false; clearInterval(timer); },
@@ -79,6 +84,7 @@ export function createMockHID() {
   return {
     hid, device: dev, reports, outputs,
     corruptCrc(readId) { reports[readId + 2][56] ^= 0xff; },
+    setRate(hz) { perTick = Math.max(1, Math.round(hz / 250)); },
     disconnect() { dev.close(); dev.opened = null; listeners.disconnect.forEach(f => f({ device: dev })); },
   };
 }

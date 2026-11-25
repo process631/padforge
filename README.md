@@ -18,8 +18,8 @@
 ## Download
 
 1. Open the **[latest release](https://github.com/process631/padforge/releases/latest)**.
-2. Download **`PadForge-1.2.1-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.2.1.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
-3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info â†’ Run anyway**.
+2. Download **`PadForge-1.3.0-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.3.0.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
+3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info → Run anyway**.
 4. Plug in your controller with a USB cable. PadForge connects automatically.
 
 Requires Windows 10 or 11 (64-bit).
@@ -28,6 +28,7 @@ Requires Windows 10 or 11 (64-bit).
 
 ### Customize: profiles stored on the controller
 - Remap the D-pad, face buttons, L1/R1/L2/R2 and stick presses on any of the four **Fn + button** profiles. Back-button remapping is experimental.
+- **Quick setups:** one click for **Competitive** (hair triggers, fast sticks), **Precision aim**, **Racing** or **Balanced**. These are real stick and trigger settings you can feel in game, and your button assignments stay the same.
 - Rename profiles, pick a stick response curve (Default, Quick, Precise, Steady, Digital, Dynamic) with a live curve chart, and set L2/R2 trigger ranges.
 - **Safe writes:**
   - The profile's checksum is verified first.
@@ -35,12 +36,14 @@ Requires Windows 10 or 11 (64-bit).
   - The controller is read back to confirm the write.
   - **Restore backup** undoes any write.
 - Undo and redo, unsaved-changes warnings, and presets you can export and share as files.
-- Profiles live on the controller, so they keep working on PS5 and PC even when PadForge is closed.
+- Profiles live on the controller, so they work in any game, on PS5 and PC, even when PadForge is closed.
 
+<p align="center"><img src="docs/screenshots/setups.png" alt="Quick setups" width="900"></p>
 <p align="center"><img src="docs/screenshots/picker.png" alt="Choosing what a button does" width="700"></p>
 
 ### Overclock: measure and raise the USB polling rate
 - Live polling rate measured two ways: reports received by your PC, and fresh data according to the controller's own clock. The second number reveals overclocks that only repeat old data.
+- At 1000 Hz or more, a **Full speed** badge and a ⚡ rate in the header show the measured speed. It uses the lower of the two numbers, so it never overstates.
 - Jitter, 99th percentile, missed and repeated reports, a live graph, and a 10-second benchmark with a before/after baseline.
 - Step-by-step guide for [hidusbf](https://github.com/LordOfMice/hidusbf), the USB filter driver used for controller overclocking, with driver detection and targets from 500 to 8000 Hz. Above 1000 Hz depends on the controller, and the fresh-data number shows whether the extra speed is real. If your controller already runs at the target rate (the DualSense Edge often reaches 1000 Hz over USB on its own), PadForge says so and hides these steps. PadForge never installs drivers itself.
 - **Fresh start:**
@@ -56,13 +59,26 @@ Model, connection, battery, firmware version, a vibration test, and a live teste
 
 <p align="center"><img src="docs/screenshots/device.png" alt="Device information and input tester" width="900"></p>
 
-**Shortcuts:** `Ctrl+Z` / `Ctrl+Y` undo and redo Â· `Ctrl+S` write to controller Â· `Ctrl+1/2/3` switch tabs
+**Shortcuts:** `Ctrl+Z` / `Ctrl+Y` undo and redo · `Ctrl+S` write to controller · `Ctrl+1/2/3` switch tabs
 
 ## Good to know
 - Options, Touch pad, Create and PS can't be remapped. The controller keeps them fixed.
 - An empty profile slot must be created once in Sony's PlayStation Accessories app before PadForge can edit it.
 - Editing profiles needs a USB cable. Overclocking only applies to USB.
-- The Edge profile format is reverse-engineered and unofficial. If a write ever misbehaves, use **Restore backup** and open an issue with the file from **Device â†’ Export diagnostics**. It contains the raw profile data and recent log, and no personal information.
+- The Edge profile format is reverse-engineered and unofficial. If a write ever misbehaves, use **Restore backup** and open an issue with the file from **Device → Export diagnostics**. It contains the raw profile data and recent log, and no personal information.
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| *"Windows protected your PC"* | Click **More info → Run anyway**. It appears because PadForge isn't code-signed yet. |
+| The browser blocks the download | Choose **Keep** on the download. Unsigned apps are flagged as uncommon. |
+| Antivirus deletes or blocks the file | It's a false positive that's common for unsigned apps. Restore it from quarantine or allow it, or use the installer instead of the portable file. |
+| *"Smart App Control blocked an app"* (Windows 11) | Smart App Control blocks every app that isn't code-signed and has no Run anyway button, so PadForge can't run on that PC until it's signed. |
+| Controller not found | Click **Not connecting?** in the app. Use a USB **data** cable plugged straight into the PC. Close Steam, DSX, DS4Windows and reWASD, which can take over the controller. Then unplug the controller and plug it back in. |
+| Can't edit profiles | Profiles need a **DualSense Edge** on **USB**. A regular DualSense or a Bluetooth connection can't do it. Empty slots must be created once in PlayStation Accessories. |
+| Picked 2000/4000/8000 Hz but it stays at 1000 Hz | The target only sets a goal. PadForge can't raise the rate by itself: going higher needs the hidusbf driver (see the Overclock tab). The DualSense Edge runs at 1000 Hz natively and doesn't produce new data faster than that, so 1000 Hz is its realistic maximum. |
+| Anything else | **Device → Export diagnostics** saves a problem report (no personal information). [Open an issue](https://github.com/process631/padforge/issues) with that file and a screenshot. |
 
 ## Build from source
 

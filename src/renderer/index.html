@@ -40,11 +40,17 @@
       <div class="side-scroll">
         <section class="group">
           <div class="group-head"><h2>Profile</h2><span class="badge" id="dirty">Unsaved changes</span></div>
-          <p class="help">Your Edge stores four profiles, one per slot. Hold <b>Fn</b> and press the slot's button (for example Fn + Square) to switch to it on the controller.</p>
+          <p class="help">Your Edge stores four profiles, one per slot. Hold <b>Fn</b> and press the slot's button (for example Fn + Square) to switch to it on the controller. Profiles live on the controller, so they work in every game, on PC and PS5, even with PadForge closed.</p>
           <label class="field"><span class="flabel">Slot on the controller</span><select id="slot" disabled></select></label>
           <div class="slot-note" id="slotNote"></div>
           <label class="field"><span class="flabel">Name <small id="nameCount">0/40</small></span>
             <input type="text" id="pname" maxlength="40" spellcheck="false" autocomplete="off" placeholder="Profile name"></label>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><h2>Quick setups</h2></div>
+          <p class="help">One click sets the sticks and triggers for a play style. Your button assignments and name stay the same. Then click <b>Write to controller</b> to use it.</p>
+          <div class="setups" id="setups"></div>
         </section>
 
         <section class="group">
@@ -118,6 +124,10 @@
     <div class="page">
       <div class="card">
         <div class="card-head"><h2>Polling rate</h2><span class="muted">Live, last 2 seconds</span></div>
+        <div class="speed-badge" id="speedBadge" hidden>
+          <div class="sb-icon" id="sbIcon"></div>
+          <div><b id="sbTitle"></b><span id="sbText"></span></div>
+        </div>
         <p class="help">The polling rate is how many times a second the controller tells your PC what you're pressing. Higher means less input delay: 250 Hz updates every 4 ms, 1000 Hz every 1 ms. Hover over any number for an explanation.</p>
         <div class="hz-row">
           <div class="hz" title="How many input reports reach your PC each second. This is the number overclocking raises."><div><span id="hz">—</span><small>Hz</small></div><p>Reports received by your PC</p></div>

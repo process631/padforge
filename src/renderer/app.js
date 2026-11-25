@@ -58,6 +58,30 @@ const CURVE_HELP = [
   'Slow near the center, fast near the edge: precise aim plus quick turns.',
 ];
 
+// One-click setups: real stick and trigger settings for a play style (button map and name are kept).
+const SETUPS = [
+  { id: 'competitive', icon: 'bolt', name: 'Competitive', desc: 'Hair triggers (full press at 40%), quick movement, and aim that is steady in the center but turns fast.', sticks: [[1, 5], [5, 5]], triggers: [[0, 102], [0, 102]] },
+  { id: 'precision', icon: 'crosshair', name: 'Precision aim', desc: 'Normal movement and a slower right stick near the center for small, careful aim.', sticks: [[0, 0], [2, 5]], triggers: [[0, 255], [0, 255]] },
+  { id: 'racing', icon: 'flag', name: 'Racing', desc: 'Smooth, steady steering and the full trigger range for gentle throttle and braking.', sticks: [[3, 5], [0, 0]], triggers: [[0, 255], [0, 255]] },
+  { id: 'balanced', icon: 'sliders', name: 'Balanced', desc: 'Back to normal: straight-line sticks and the full trigger range.', sticks: [[0, 0], [0, 0]], triggers: [[0, 255], [0, 255]] },
+];
+const setupMatches = (s, w) => w.sticks.every((x, i) => x.preset === s.sticks[i][0] && x.step === s.sticks[i][1])
+  && w.triggers.flat().join() === s.triggers.flat().join();
+function renderSetups() {
+  $$('#setups .setup').forEach(b => {
+    const on = setupMatches(SETUPS.find(x => x.id === b.dataset.setup), S.work);
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function applySetup(id) {
+  const s = SETUPS.find(x => x.id === id);
+  S.work.sticks = s.sticks.map(([preset, step]) => ({ preset, step, values: Edge.curveValues(preset, step) }));
+  S.work.triggers = s.triggers.map(t => [...t]);
+  commit();
+  toast(`${s.name} setup applied. Click Write to controller to use it.`);
+}
+
 function renderEditor() {
   const w = S.work;
   const name = $('#pname');
@@ -82,6 +106,7 @@ function renderEditor() {
     Object.assign($(`#${p}Fill`).style, { left: `${a / 2.55}%`, width: `${(z - a) / 2.55}%` });
   });
   diagram.render(w.map);
+  renderSetups();
   renderActions();
 }
 
@@ -173,7 +198,7 @@ async function readEdge({ silent = false } = {}) {
     log('info', `Read profiles: ${slots.map(s => `${s.name}=${s.assigned ? (s.crcOk ? 'ok' : 'checksum-mismatch') : 'empty'}`).join(', ')}`);
   } catch (e) {
     S.slots = null;
-    msg(`Couldn't read profiles: ${e.message}`, 'bad');
+    msg(`Couldn't read profiles: ${e.message}. Unplug the controller, plug it back in and click Reload. If it keeps happening, export a problem report from the Device tab.`, 'bad');
     log('error', `Read profiles failed: ${e.message}`);
   } finally { setBusy(false); }
 }
@@ -219,7 +244,7 @@ async function writeToController() {
     msg(`Written and verified. Press Fn + ${NAME[s.key]} on the controller to use it.`, 'good');
     toast('Profile written to the controller', 'success');
   } catch (e) {
-    msg(`Write failed: ${e.message}. Restore backup can put the previous profile back.`, 'bad');
+    msg(`Write failed: ${e.message}. Restore backup can put the previous profile back. If it keeps happening, export a problem report from the Device tab and send it in.`, 'bad');
     log('error', `Write failed: ${e.message}`);
     toast('Write failed', 'error');
   } finally { setBusy(false); }
@@ -325,6 +350,7 @@ function renderStatus() {
     el.className = 'status ' + (canOnboard() || (!ctl.isEdge && t) ? 'ok' : 'warn');
     el.innerHTML = `<i class="dot"></i><span>${esc(ctl.model)}</span><span class="sep"></span>`
       + (t ? `${icon(t === 'usb' ? 'usb' : 'bluetooth', 14)}<span>${t === 'usb' ? 'USB' : 'Bluetooth'}</span>` : '<span>Connecting…</span>')
+      + (S.liveRate ? `<span class="sep"></span><span class="speed" title="Measured polling rate: fresh input ${S.liveRate} times a second">${icon('bolt', 13)}${S.liveRate} Hz</span>` : '')
       + (b?.percent != null ? `<span class="sep"></span>${batteryIcon(b)}<span>${b.percent}%</span>` : '');
   }
   $('#connect').textContent = ctl.connected ? 'Reconnect' : 'Connect';
@@ -339,8 +365,34 @@ function renderBanner() {
   el.hidden = !t;
   if (t) {
     el.className = 'banner ' + kind;
-    el.innerHTML = `${icon(kind === 'warn' ? 'bluetooth' : 'gamepad', 19)}<span><b>${esc(t[0])}</b> ${esc(t[1])}</span>${!ctl.connected ? '<button class="btn sm" data-action="connect">Connect</button>' : ''}`;
+    el.innerHTML = `${icon(kind === 'warn' ? 'bluetooth' : 'gamepad', 19)}<span><b>${esc(t[0])}</b> ${esc(t[1])}</span>`
+      + (!ctl.connected ? '<button class="btn sm ghost" data-action="help">Not connecting?</button><button class="btn sm" data-action="connect">Connect</button>' : '');
   }
+}
+
+/** Step-by-step help when no controller shows up, with a live check for apps that grab the controller. */
+function showConnectHelp() {
+  const body = document.createElement('div');
+  body.innerHTML = `<p>PadForge can't see a Sony controller yet. These fix almost every case:</p>
+    <ol class="steps">
+      <li><div><b>Use a USB data cable.</b> Some cables only charge. Use the one that came with the controller, plugged straight into the PC rather than a hub or keyboard port.</div></li>
+      <li><div><b>Close apps that take over the controller.</b> <span data-x="apps">Checking this PC…</span></div></li>
+      <li><div><b>Unplug the controller, wait 3 seconds, and plug it back in.</b> PadForge connects by itself when it appears.</div></li>
+      <li><div><b>Still nothing?</b> Export a problem report from the <b>Device</b> tab (Export diagnostics) and send it with a screenshot.</div></li>
+    </ol>`;
+  const m = openModal({
+    title: 'Controller not connecting', body,
+    actions: [{ text: 'Close', value: false, role: 'cancel' }, { text: 'Try again', value: true, role: 'confirm', kind: 'primary' }],
+    onClose: retry => { if (retry) connect(); },
+  });
+  api.conflicts().then(r => {
+    const el = $('[data-x=apps]', m.body);
+    if (!el) return;
+    const found = [...(r?.apps || []).map(a => a.name), ...(r?.services?.HidHide && r.services.HidHide !== 'not-installed' ? ['HidHide (it can hide the controller from apps)'] : [])];
+    el.innerHTML = found.length
+      ? `Found on this PC: <b>${found.map(esc).join(', ')}</b>. Close them fully, including from the system tray, then try again.`
+      : 'None found running right now (Steam, DSX, DS4Windows, reWASD, HidHide), so this is probably not the cause.';
+  }).catch(() => {});
 }
 
 function renderDevice() {
@@ -414,6 +466,7 @@ ctl.addEventListener('change', () => {
   renderStatus(); renderBanner();
   if (!ctl.connected) {
     meter.reset(); diagram.clearLive(); latest = null; S.ocAtTarget = null;
+    S.liveRate = null; renderSpeed(); renderStatus();
     $('#l2Live').style.width = '0'; $('#r2Live').style.width = '0';
     S.slots = null; renderSlots(); renderDevice();
     return;
@@ -428,12 +481,34 @@ async function connect() {
   try {
     S.slots = null;
     renderSlots();
-    if (!(await ctl.connect(true))) toast('No Sony controller found. Plug it in and try again.', 'error');
+    if (!(await ctl.connect(true))) { toast('No Sony controller found.', 'error'); showConnectHelp(); }
   } catch (e) {
     toast(e.message, 'error', 6000);
     log('warn', `Connect failed: ${e.message}`);
+    showConnectHelp();
   }
 }
+
+/* ======================= measured speed (header chip + badge) ======================= */
+// Round to a standard rate when within ~12% (timing jitter), otherwise to the nearest 50 Hz.
+const nominalRate = v => [250, 500, 1000, 2000, 4000, 8000].find(s => Math.abs(v - s) / s <= 0.12) ?? Math.round(v / 50) * 50;
+// Shown only when the rate is measured, and it uses the lower of "received" and "fresh data", so it never overstates.
+function renderSpeed() {
+  const r = S.liveRate;
+  $('#speedBadge').hidden = !r;
+  if (!r) return;
+  const times = r / 250, ms = 1000 / r;
+  $('#sbIcon').innerHTML = icon('bolt', 24);
+  $('#sbTitle').textContent = `Full speed: ${r} Hz`;
+  $('#sbText').textContent = `${Number.isInteger(times) ? times : times.toFixed(1)}× faster than a standard DualSense (250 Hz). Your controller sends fresh input every ${ms >= 1 ? ms.toFixed(0) : String(Number(ms.toFixed(2)))} ms.`;
+}
+setInterval(() => {
+  const st = ctl.connected ? meter.stats(2000) : null;
+  const fresh = st && (st.ctrlHz ?? st.hz);
+  const low = st && Math.min(st.hz, fresh);
+  const rate = st && st.hz >= 900 && fresh >= 900 ? nominalRate(low) : null;
+  if (rate !== S.liveRate) { S.liveRate = rate; renderStatus(); renderSpeed(); }
+}, 1000);
 
 /* ======================= overclock ======================= */
 // Once the controller is measured at the target rate over USB, the overclock steps are folded away.
@@ -468,11 +543,14 @@ setInterval(() => {
   set('#sStale', st.stalePct == null ? '—' : `${st.stalePct.toFixed(1)}%`);
   set('#sDrops', String(st.drops));
   drawIntervals($('#chart'), meter.recentIntervals(400), 1000 / target);
+  const now = nominalRate(st.hz), driverOn = S.ocDriver === 'running';
   let v;
   if (ctl.transport === 'bt') v = 'Over Bluetooth the controller sets its own rate. Overclocking only applies over USB.';
   else if (st.hz >= target * 0.9) v = `✓ Running at your ${target} Hz target.`;
-  else if (st.hz < 320) v = `Stock rate. Follow the steps below to overclock to ${target} Hz.`;
-  else v = `Partly overclocked (${Math.round(st.hz)} Hz). Check that hidusbf is set to ${target} Hz, then replug the controller.`;
+  else if (!driverOn && st.hz >= 900) v = `Your controller is at ${now} Hz, its normal top speed over USB. PadForge can't raise the rate by itself: ${target} Hz needs the hidusbf driver (steps below), and most controllers, the DualSense Edge included, don't produce new data faster than 1000 Hz.`;
+  else if (!driverOn) v = `Stock rate (${now} Hz). PadForge can't raise the rate by itself. Reaching ${target} Hz needs the hidusbf driver: follow the steps below.`;
+  else if (st.hz >= 900) v = `The overclock driver is running, but the controller still reports ${now} Hz. Check that hidusbf is set to ${target} Hz for it, then replug. If it stays at ${now} Hz, that's the controller's limit: many controllers, the DualSense Edge included, can't go above 1000 Hz.`;
+  else v = `The overclock driver is running, but the rate is only ${now} Hz. Check that hidusbf is set to ${target} Hz for your controller, then replug it.`;
   if (st.ctrlHz && st.hz > 320 && st.ctrlHz < st.hz * 0.8) v += ` Only about ${Math.round(st.ctrlHz)} reports a second carry new data.`;
   set('#verdict', v);
 }, 250);
@@ -536,6 +614,7 @@ let toolPath = store.get('ocTool', null);
 function renderTool() { $('#toolPath').textContent = toolPath || ''; $('#launchTool').disabled = !toolPath; }
 async function refreshOc() {
   const s = await api.ocStatus();
+  S.ocDriver = s;
   const el = $('#ocState');
   el.className = 'pill ' + (s === 'running' ? 'ok' : s === 'installed' ? 'warn' : '');
   el.innerHTML = s === 'running' ? `${icon('check', 13)}<span>Driver running</span>` : s === 'installed' ? 'Driver installed, not running' : 'Driver not installed';
@@ -712,6 +791,9 @@ document.addEventListener('keydown', e => {
 /* ======================= wiring ======================= */
 $$('.tabs [role=tab]').forEach(b => { b.onclick = () => showView(b.dataset.view); });
 $$('[data-icon]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon, 15)));
+$('#setups').innerHTML = SETUPS.map(s => `<button class="setup" data-setup="${s.id}" aria-pressed="false">`
+  + `<span class="st-head">${icon(s.icon, 15)}${esc(s.name)}<span class="on">${icon('check', 14)}</span></span><small>${esc(s.desc)}</small></button>`).join('');
+$('#setups').addEventListener('click', e => { const b = e.target.closest('[data-setup]'); if (b) applySetup(b.dataset.setup); });
 $('#undo').innerHTML = icon('undo', 18);
 $('#redo').innerHTML = icon('redo', 18);
 $('#resetAll').innerHTML = icon('reset', 18);
@@ -719,7 +801,10 @@ $('#undo').onclick = undo;
 $('#redo').onclick = redo;
 $('#resetAll').onclick = () => { S.work = Edge.defaultProfile(S.work.label); commit(); toast('Everything reset to default. Use Undo to go back.'); };
 $('#connect').onclick = connect;
-$('#banner').addEventListener('click', e => { if (e.target.closest('[data-action=connect]')) connect(); });
+$('#banner').addEventListener('click', e => {
+  if (e.target.closest('[data-action=connect]')) connect();
+  else if (e.target.closest('[data-action=help]')) showConnectHelp();
+});
 $('#about').addEventListener('click', e => { const a = e.target.closest('[data-link]'); if (a) { e.preventDefault(); api.openLink(a.dataset.link); } });
 $('#writeEdge').onclick = writeToController;
 $('#readEdge').onclick = async () => {
