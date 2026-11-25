@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>PadForge</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="titlebar">
+  <div class="brand"><img src="assets/icon.png" alt=""><span class="brand-name">Pad<em>Forge</em></span><span class="brand-ver" id="ver"></span></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-view="customize" class="active" aria-selected="true" title="Customize (Ctrl+1)">Customize</button>
+    <button role="tab" data-view="overclock" aria-selected="false" tabindex="-1" title="Overclock (Ctrl+2)">Overclock</button>
+    <button role="tab" data-view="device" aria-selected="false" tabindex="-1" title="Device (Ctrl+3)">Device</button>
+  </nav>
+  <div class="status" id="status" aria-live="polite"></div>
+  <button class="btn" id="connect">Connect</button>
+</header>
+
+<main>
+  <!-- ============ Customize ============ -->
+  <section class="view active" id="view-customize" role="tabpanel">
+    <div class="stage">
+      <div class="banner" id="banner" hidden></div>
+      <div class="stage-head">
+        <h1>Button assignments</h1>
+        <div class="toolbar">
+          <button class="icon-btn" id="undo" title="Undo (Ctrl+Z)" aria-label="Undo"></button>
+          <button class="icon-btn" id="redo" title="Redo (Ctrl+Y)" aria-label="Redo"></button>
+          <span class="tsep"></span>
+          <button class="icon-btn" id="resetAll" title="Reset everything to default" aria-label="Reset to default"></button>
+        </div>
+      </div>
+      <svg id="pad" viewBox="0 0 1000 640" role="group" aria-label="Controller buttons. Select a button to change what it does."></svg>
+      <p class="legend"><span><i class="lg remap"></i>Remapped</span><span><i class="lg press"></i>Pressed now</span><span><i class="lg lock"></i>Fixed on the controller</span><span class="muted">Select a button to change what it does.</span></p>
+    </div>
+
+    <aside class="side" aria-label="Profile settings">
+      <div class="side-scroll">
+        <section class="group">
+          <div class="group-head"><h2>Profile</h2><span class="badge" id="dirty">Unsaved changes</span></div>
+          <label class="field"><span class="flabel">Slot on the controller</span><select id="slot" disabled></select></label>
+          <div class="slot-note" id="slotNote"></div>
+          <label class="field"><span class="flabel">Name <small id="nameCount">0/40</small></span>
+            <input type="text" id="pname" maxlength="40" spellcheck="false" autocomplete="off" placeholder="Profile name"></label>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><h2>Stick sensitivity</h2></div>
+          <div class="sticks">
+            <div class="stick">
+              <span class="flabel">Left stick</span>
+              <select id="lPreset" aria-label="Left stick curve"></select>
+              <div class="curve" id="lCurve"></div>
+              <label class="field compact"><span class="flabel">Adjust <small id="lStepV"></small></span><input type="range" id="lStep" min="0" max="10" aria-label="Left stick adjustment"></label>
+            </div>
+            <div class="stick">
+              <span class="flabel">Right stick</span>
+              <select id="rPreset" aria-label="Right stick curve"></select>
+              <div class="curve" id="rCurve"></div>
+              <label class="field compact"><span class="flabel">Adjust <small id="rStepV"></small></span><input type="range" id="rStep" min="0" max="10" aria-label="Right stick adjustment"></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><h2>Trigger range</h2></div>
+          <div class="field"><span class="flabel">L2 <small id="l2V"></small></span>
+            <div class="trig"><div class="track"></div><div class="fill" id="l2Fill"></div>
+              <input type="range" id="l2Min" min="0" max="255" aria-label="L2 start"><input type="range" id="l2Max" min="0" max="255" aria-label="L2 end"></div>
+            <div class="live-bar"><i id="l2Live"></i></div></div>
+          <div class="field"><span class="flabel">R2 <small id="r2V"></small></span>
+            <div class="trig"><div class="track"></div><div class="fill" id="r2Fill"></div>
+              <input type="range" id="r2Min" min="0" max="255" aria-label="R2 start"><input type="range" id="r2Max" min="0" max="255" aria-label="R2 end"></div>
+            <div class="live-bar"><i id="r2Live"></i></div></div>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><h2>Presets on this PC</h2></div>
+          <select id="preset" aria-label="Saved presets"></select>
+          <div class="btn-row">
+            <button class="btn sm" id="loadPreset" data-icon="download">Load</button>
+            <button class="btn sm" id="savePreset" data-icon="save">Save current</button>
+            <button class="btn sm" id="exportPreset" data-icon="external">Export…</button>
+            <button class="btn sm" id="importPreset" data-icon="upload">Import…</button>
+            <button class="btn sm ghost danger-text" id="delPreset" data-icon="trash">Delete</button>
+          </div>
+        </section>
+
+        <section class="group">
+          <div class="group-head"><h2>Controller data</h2></div>
+          <div class="btn-row">
+            <button class="btn sm" id="readEdge" data-icon="refresh" disabled>Reload</button>
+            <button class="btn sm" id="restoreEdge" data-icon="reset" disabled>Restore backup…</button>
+            <button class="btn sm ghost" id="backupFolder" data-icon="folder">Backups</button>
+          </div>
+          <p class="hint">All four slots are backed up automatically before every write.</p>
+        </section>
+      </div>
+      <div class="actionbar">
+        <button class="btn primary block" id="writeEdge" disabled>Write to controller</button>
+        <div class="msg" id="edgeMsg" role="status"></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ============ Overclock ============ -->
+  <section class="view" id="view-overclock" role="tabpanel">
+    <div class="page">
+      <div class="card">
+        <div class="card-head"><h2>Polling rate</h2><span class="muted">Live, last 2 seconds</span></div>
+        <div class="hz-row">
+          <div class="hz"><div><span id="hz">—</span><small>Hz</small></div><p>Reports received by your PC</p></div>
+          <div class="hz alt"><div><span id="ctrlHz">—</span><small>Hz</small></div><p>Fresh data from the controller</p></div>
+        </div>
+        <div class="stats">
+          <div><small>Average interval</small><b id="sAvg">—</b></div>
+          <div><small>99th percentile</small><b id="sP99">—</b></div>
+          <div><small>Worst interval</small><b id="sMax">—</b></div>
+          <div><small>Jitter (σ)</small><b id="sJit">—</b></div>
+          <div><small>Repeated data</small><b id="sStale">—</b></div>
+          <div><small>Missed reports</small><b id="sDrops">—</b></div>
+        </div>
+        <canvas id="chart" width="1680" height="260" aria-label="Report interval graph"></canvas>
+        <p class="verdict" id="verdict">Connect a controller to measure.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Benchmark</h2><button class="btn primary sm" id="benchRun"></button></div>
+        <div class="progress" id="benchProgress" hidden><i></i></div>
+        <div id="benchOut"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Overclock over USB</h2><span class="pill" id="ocState">Checking…</span></div>
+        <p class="muted">A stock DualSense reports about 250 times a second over USB. Raising that takes a USB filter driver. PadForge works with <b>hidusbf</b>, the driver controller-overclock guides use. You download and install it yourself; PadForge never installs drivers.</p>
+        <div class="target-row"><span>Target rate</span>
+          <select id="target"><option value="500">500 Hz</option><option value="1000">1000 Hz</option></select></div>
+        <ol class="steps">
+          <li><div><b>Download hidusbf</b> and unzip it to a permanent folder.</div><button class="btn sm" id="getTool" data-icon="external">Open download page</button></li>
+          <li><div><b>Point PadForge at Setup.exe</b> from that folder. <span class="muted path" id="toolPath"></span></div><button class="btn sm" id="pickTool" data-icon="folder">Locate Setup.exe</button></li>
+          <li><div><b>Run the tool</b> and approve the admin prompt. Tick <i>Show all devices</i>, select your DualSense (VID <code>054C</code>), tick <i>Filter on device</i>, choose your target rate, then click <i>Install service</i> and <i>Restart</i>.</div><button class="btn sm primary" id="launchTool" data-icon="play" disabled>Open overclock tool</button></li>
+          <li><div><b>Replug the controller</b>, then run the benchmark above to confirm the new rate.</div></li>
+        </ol>
+        <p class="hint">Windows Memory Integrity can block unsigned drivers; hidusbf's readme explains the options. Overclocking only affects USB, and you can undo it from the same tool.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Device ============ -->
+  <section class="view" id="view-device" role="tabpanel">
+    <div class="page grid2">
+      <div class="card">
+        <div class="card-head"><h2>Controller</h2><button class="btn sm" id="rumble" data-icon="vibrate" disabled>Test vibration</button></div>
+        <dl class="kv" id="devInfo"></dl>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Input test</h2><span class="muted">Press anything</span></div>
+        <div id="tester"></div>
+      </div>
+      <div class="card span2">
+        <div class="card-head"><h2>About</h2></div>
+        <div id="about"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toasts" id="toasts"></div>
+<script src="renderer.js"></script>
+</body>
+</html>

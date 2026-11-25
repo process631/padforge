@@ -1,0 +1,79 @@
+{
+  "name": "padforge",
+  "productName": "PadForge",
+  "version": "1.1.0",
+  "description": "DualSense Edge profile editor, button remapper and polling-rate tool",
+  "author": "PadForge",
+  "license": "MIT",
+  "homepage": "https://github.com/process631/padforge",
+  "repository": { "type": "git", "url": "https://github.com/process631/padforge.git" },
+  "bugs": { "url": "https://github.com/process631/padforge/issues" },
+  "main": "build/app/main.js",
+  "scripts": {
+    "start": "node scripts/build.js --dev && electron build/app",
+    "build": "node scripts/build.js",
+    "test": "node --test \"test/*.test.mjs\"",
+    "selftest": "node scripts/build.js && node scripts/selftest.js",
+    "check": "npm test && npm run selftest",
+    "dist": "npm run check && electron-builder --win nsis portable",
+    "icon": "electron scripts/make-icon.js"
+  },
+  "build": {
+    "appId": "local.padforge",
+    "productName": "PadForge",
+    "copyright": "Copyright © 2026 PadForge",
+    "directories": {
+      "app": "build/app",
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "asar": true,
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US"
+    ],
+    "extraResources": [
+      {
+        "from": "THIRD_PARTY_NOTICES.txt",
+        "to": "THIRD_PARTY_NOTICES.txt"
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PadForge",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.1",
+    "esbuild": "0.24.2"
+  },
+  "allowScripts": {
+    "electron@45.2.3": true
+  }
+}
