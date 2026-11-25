@@ -65,6 +65,8 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     set('#rStep', 3);
     set('#l2Min', 20); set('#l2Max', 230); set('#r2Max', 200);
     check('draws stick response curves', $('#lCurve .cline') && $('#rCurve .cline'));
+    check('explains the chosen curves', /careful adjustments/.test($('#lDesc').textContent) && /small movements/.test($('#rDesc').textContent));
+    check('explains the trigger range', /Starts at 8% · full at 90%/.test($('#l2V').textContent) && document.querySelectorAll('.help').length >= 9, $('#l2V').textContent);
     await shot('customize');
 
     // Write, confirm, verify

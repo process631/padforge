@@ -40,6 +40,7 @@
       <div class="side-scroll">
         <section class="group">
           <div class="group-head"><h2>Profile</h2><span class="badge" id="dirty">Unsaved changes</span></div>
+          <p class="help">Your Edge stores four profiles, one per slot. Hold <b>Fn</b> and press the slot's button (for example Fn + Square) to switch to it on the controller.</p>
           <label class="field"><span class="flabel">Slot on the controller</span><select id="slot" disabled></select></label>
           <div class="slot-note" id="slotNote"></div>
           <label class="field"><span class="flabel">Name <small id="nameCount">0/40</small></span>
@@ -48,24 +49,29 @@
 
         <section class="group">
           <div class="group-head"><h2>Stick sensitivity</h2></div>
+          <p class="help">Changes how the game feels stick movement. In each chart, left to right is how far you push the stick, and bottom to top is how far the game thinks you pushed it. The dashed line is a normal, 1-to-1 response.</p>
           <div class="sticks">
             <div class="stick">
               <span class="flabel">Left stick</span>
               <select id="lPreset" aria-label="Left stick curve"></select>
               <div class="curve" id="lCurve"></div>
+              <p class="curve-desc" id="lDesc"></p>
               <label class="field compact"><span class="flabel">Adjust <small id="lStepV"></small></span><input type="range" id="lStep" min="0" max="10" aria-label="Left stick adjustment"></label>
             </div>
             <div class="stick">
               <span class="flabel">Right stick</span>
               <select id="rPreset" aria-label="Right stick curve"></select>
               <div class="curve" id="rCurve"></div>
+              <p class="curve-desc" id="rDesc"></p>
               <label class="field compact"><span class="flabel">Adjust <small id="rStepV"></small></span><input type="range" id="rStep" min="0" max="10" aria-label="Right stick adjustment"></label>
             </div>
           </div>
+          <p class="hint">Adjust fine-tunes the chosen curve (0 to 10). Default is always a straight line.</p>
         </section>
 
         <section class="group">
           <div class="group-head"><h2>Trigger range</h2></div>
+          <p class="help"><b>Left handle:</b> how far you must pull before the press counts. Raise it to ignore light touches. <b>Right handle:</b> where the trigger counts as fully pressed. Lower it for a "hair trigger" that fires sooner, without pulling all the way. The green bar shows your trigger live.</p>
           <div class="field"><span class="flabel">L2 <small id="l2V"></small></span>
             <div class="trig"><div class="track"></div><div class="fill" id="l2Fill"></div>
               <input type="range" id="l2Min" min="0" max="255" aria-label="L2 start"><input type="range" id="l2Max" min="0" max="255" aria-label="L2 end"></div>
@@ -78,6 +84,7 @@
 
         <section class="group">
           <div class="group-head"><h2>Presets on this PC</h2></div>
+          <p class="help">Save setups on your PC to reuse later or share as a file. Loading a preset only changes the editor; click Write to controller to put it on the controller.</p>
           <select id="preset" aria-label="Saved presets"></select>
           <div class="btn-row">
             <button class="btn sm" id="loadPreset" data-icon="download">Load</button>
@@ -90,6 +97,7 @@
 
         <section class="group">
           <div class="group-head"><h2>Controller data</h2></div>
+          <p class="help"><b>Reload</b> reads the profiles from the controller again. <b>Restore backup</b> puts back the profiles from before an earlier write.</p>
           <div class="btn-row">
             <button class="btn sm" id="readEdge" data-icon="refresh" disabled>Reload</button>
             <button class="btn sm" id="restoreEdge" data-icon="reset" disabled>Restore backup…</button>
@@ -110,24 +118,26 @@
     <div class="page">
       <div class="card">
         <div class="card-head"><h2>Polling rate</h2><span class="muted">Live, last 2 seconds</span></div>
+        <p class="help">The polling rate is how many times a second the controller tells your PC what you're pressing. Higher means less input delay: 250 Hz updates every 4 ms, 1000 Hz every 1 ms. Hover over any number for an explanation.</p>
         <div class="hz-row">
-          <div class="hz"><div><span id="hz">—</span><small>Hz</small></div><p>Reports received by your PC</p></div>
-          <div class="hz alt"><div><span id="ctrlHz">—</span><small>Hz</small></div><p>Fresh data from the controller</p></div>
+          <div class="hz" title="How many input reports reach your PC each second. This is the number overclocking raises."><div><span id="hz">—</span><small>Hz</small></div><p>Reports received by your PC</p></div>
+          <div class="hz alt" title="How many of those reports contain new data, measured by the controller's own clock. If this stays lower than the PC number, the extra reports only repeat old data."><div><span id="ctrlHz">—</span><small>Hz</small></div><p>Fresh data from the controller</p></div>
         </div>
         <div class="stats">
-          <div><small>Average interval</small><b id="sAvg">—</b></div>
-          <div><small>99th percentile</small><b id="sP99">—</b></div>
-          <div><small>Worst interval</small><b id="sMax">—</b></div>
-          <div><small>Jitter (σ)</small><b id="sJit">—</b></div>
-          <div><small>Repeated data</small><b id="sStale">—</b></div>
-          <div><small>Missed reports</small><b id="sDrops">—</b></div>
+          <div title="Average time between reports. Lower is better: 4 ms at 250 Hz, 1 ms at 1000 Hz."><small>Average interval</small><b id="sAvg">—</b></div>
+          <div title="99% of reports arrive faster than this. It shows how bad the occasional slow report is."><small>99th percentile</small><b id="sP99">—</b></div>
+          <div title="The single longest gap between two reports in the last 2 seconds."><small>Worst interval</small><b id="sMax">—</b></div>
+          <div title="How uneven the timing is. Lower means smoother, more consistent input."><small>Jitter (σ)</small><b id="sJit">—</b></div>
+          <div title="Share of reports that repeated the previous data instead of sending something new."><small>Repeated data</small><b id="sStale">—</b></div>
+          <div title="Reports the controller sent that never reached your PC. Should be 0."><small>Missed reports</small><b id="sDrops">—</b></div>
         </div>
-        <canvas id="chart" width="1680" height="260" aria-label="Report interval graph"></canvas>
+        <canvas id="chart" width="1680" height="260" aria-label="Report interval graph" title="Time between each report. Flat and low is best. The dashed green line is your target."></canvas>
         <p class="verdict" id="verdict">Connect a controller to measure.</p>
       </div>
 
       <div class="card">
         <div class="card-head"><h2>Benchmark</h2><button class="btn primary sm" id="benchRun"></button></div>
+        <p class="help">Measures for 10 seconds and keeps the result. Run it once before overclocking and click <b>Set as baseline</b>, then run it again afterward to see the improvement. The chart shows how often each gap between reports happened. A single tall bar on the left is ideal.</p>
         <div class="progress" id="benchProgress" hidden><i></i></div>
         <div id="benchOut"></div>
       </div>
@@ -153,10 +163,12 @@
     <div class="page grid2">
       <div class="card">
         <div class="card-head"><h2>Controller</h2><button class="btn sm" id="rumble" data-icon="vibrate" disabled>Test vibration</button></div>
+        <p class="help">Details your controller reports about itself. <b>Test vibration</b> briefly rumbles both motors, to confirm PadForge can talk to the controller.</p>
         <dl class="kv" id="devInfo"></dl>
       </div>
       <div class="card">
         <div class="card-head"><h2>Input test</h2><span class="muted">Press anything</span></div>
+        <p class="help">Each button lights up while you press it. Use this to spot a button that doesn't register, or stick drift: a stick that shows movement while you aren't touching it.</p>
         <div id="tester"></div>
       </div>
       <div class="card span2">

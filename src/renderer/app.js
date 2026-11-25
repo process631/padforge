@@ -48,6 +48,15 @@ function msg(text, kind = '') {
 /* ======================= editor ======================= */
 const diagram = createDiagram($('#pad'), { onPick: openPicker });
 
+const CURVE_HELP = [
+  'Linear: the game gets exactly how far you push. A good all-round choice.',
+  'Reacts strongly to small movements. Fast turns and snappy aim.',
+  'Slower near the center for small, careful adjustments. Good for aiming.',
+  'Smooths out small movements to reduce shaky aim and accidental drift.',
+  'Almost on/off: a small push counts as a big one. Like a D-pad.',
+  'Slow near the center, fast near the edge: precise aim plus quick turns.',
+];
+
 function renderEditor() {
   const w = S.work;
   const name = $('#pname');
@@ -62,12 +71,13 @@ function renderEditor() {
     step.value = String(s.step ?? 5);
     $(`#${p}StepV`).textContent = s.preset === 0 ? 'Linear' : s.step == null ? 'Custom' : `${s.step} of 10`;
     $(`#${p}Curve`).innerHTML = curveSvg(s.values);
+    $(`#${p}Desc`).textContent = known ? CURVE_HELP[s.preset] : 'A custom curve set by another app. PadForge keeps it unless you pick a preset.';
   });
   [['l2', 0], ['r2', 1]].forEach(([p, i]) => {
     const [a, z] = w.triggers[i];
     $(`#${p}Min`).value = String(a);
     $(`#${p}Max`).value = String(z);
-    $(`#${p}V`).textContent = `${Math.round(a / 2.55)}% – ${Math.round(z / 2.55)}%`;
+    $(`#${p}V`).textContent = a === 0 && z === 255 ? 'Full range (default)' : `Starts at ${Math.round(a / 2.55)}% · full at ${Math.round(z / 2.55)}%`;
     Object.assign($(`#${p}Fill`).style, { left: `${a / 2.55}%`, width: `${(z - a) / 2.55}%` });
   });
   diagram.render(w.map);
@@ -491,12 +501,12 @@ function renderBench() {
     ? `<span class="compare">Baseline ${Math.round(base.hz)} Hz → <b>${Math.round(r.hz)} Hz</b><span class="${r.hz >= base.hz ? 'up' : 'down'}">${r.hz >= base.hz ? '+' : ''}${Math.round((r.hz / base.hz - 1) * 100)}%</span></span>` : '';
   out.innerHTML = `
     <div class="bench-grid">
-      <div class="bstat big"><span>${Math.round(r.hz)}</span><small>Hz received</small></div>
-      <div class="bstat big"><span>${r.ctrlHz ? Math.round(r.ctrlHz) : '—'}</span><small>Hz fresh data</small></div>
-      <div class="bstat"><b>${r.p50.toFixed(2)} ms</b><small>Median interval</small></div>
-      <div class="bstat"><b>${r.p99.toFixed(2)} ms</b><small>99th percentile</small></div>
-      <div class="bstat"><b>${r.sd.toFixed(2)} ms</b><small>Jitter (σ)</small></div>
-      <div class="bstat"><b>${r.stalePct == null ? '—' : `${r.stalePct.toFixed(1)}%`}</b><small>Repeated data</small></div>
+      <div class="bstat big" title="Average reports your PC received per second during the test."><span>${Math.round(r.hz)}</span><small>Hz received</small></div>
+      <div class="bstat big" title="Reports per second that carried new data, by the controller's own clock."><span>${r.ctrlHz ? Math.round(r.ctrlHz) : '—'}</span><small>Hz fresh data</small></div>
+      <div class="bstat" title="The typical time between reports. Half were faster, half slower."><b>${r.p50.toFixed(2)} ms</b><small>Median interval</small></div>
+      <div class="bstat" title="99% of reports arrived faster than this. It shows how bad the occasional slow report is."><b>${r.p99.toFixed(2)} ms</b><small>99th percentile</small></div>
+      <div class="bstat" title="How uneven the timing was. Lower means smoother input."><b>${r.sd.toFixed(2)} ms</b><small>Jitter (σ)</small></div>
+      <div class="bstat" title="Share of reports that repeated old data instead of sending new data."><b>${r.stalePct == null ? '—' : `${r.stalePct.toFixed(1)}%`}</b><small>Repeated data</small></div>
     </div>
     ${histogramSvg(r.histogram)}
     <div class="bench-foot">${cmp}<span class="muted">${esc(r.model)} · ${r.transport === 'usb' ? 'USB' : 'Bluetooth'} · ${esc(new Date(r.when).toLocaleString())}</span>

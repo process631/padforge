@@ -18,8 +18,8 @@
 ## Download
 
 1. Open the **[latest release](https://github.com/process631/padforge/releases/latest)**.
-2. Download **`PadForge-1.1.0-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.1.0.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
-3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info → Run anyway**.
+2. Download **`PadForge-1.1.1-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.1.1.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
+3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info â†’ Run anyway**.
 4. Plug in your controller with a USB cable. PadForge connects automatically.
 
 Requires Windows 10 or 11 (64-bit).
@@ -51,13 +51,13 @@ Model, connection, battery, firmware version, a vibration test, and a live teste
 
 <p align="center"><img src="docs/screenshots/device.png" alt="Device information and input tester" width="900"></p>
 
-**Shortcuts:** `Ctrl+Z` / `Ctrl+Y` undo and redo · `Ctrl+S` write to controller · `Ctrl+1/2/3` switch tabs
+**Shortcuts:** `Ctrl+Z` / `Ctrl+Y` undo and redo Â· `Ctrl+S` write to controller Â· `Ctrl+1/2/3` switch tabs
 
 ## Good to know
 - Options, Touch pad, Create and PS can't be remapped. The controller keeps them fixed.
 - An empty profile slot must be created once in Sony's PlayStation Accessories app before PadForge can edit it.
 - Editing profiles needs a USB cable. Overclocking only applies to USB.
-- The Edge profile format is reverse-engineered and unofficial. If a write ever misbehaves, use **Restore backup** and open an issue with the file from **Device → Export diagnostics**. It contains the raw profile data and recent log, and no personal information.
+- The Edge profile format is reverse-engineered and unofficial. If a write ever misbehaves, use **Restore backup** and open an issue with the file from **Device â†’ Export diagnostics**. It contains the raw profile data and recent log, and no personal information.
 
 ## Build from source
 
