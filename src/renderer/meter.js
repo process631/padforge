@@ -124,7 +124,7 @@ export function drawIntervals(canvas, iv, targetMs) {
   ctx.setLineDash([]);
   ctx.fillStyle = 'rgba(52, 211, 153, .8)';
   ctx.font = '22px Segoe UI, sans-serif';
-  ctx.fillText(`target ${targetMs.toFixed(targetMs < 1.5 ? 1 : 0)} ms`, 12, y(targetMs) - 10);
+  ctx.fillText(`target ${targetMs.toFixed(targetMs < 1 ? 3 : targetMs < 1.5 ? 1 : 0).replace(/0+$/, '').replace(/\.$/, '')} ms`, 12, y(targetMs) - 10);
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#6aa1ff'); grad.addColorStop(1, '#2f6ff0');
   ctx.strokeStyle = grad;

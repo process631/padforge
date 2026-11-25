@@ -413,7 +413,7 @@ function flushLive() {
 ctl.addEventListener('change', () => {
   renderStatus(); renderBanner();
   if (!ctl.connected) {
-    meter.reset(); diagram.clearLive(); latest = null;
+    meter.reset(); diagram.clearLive(); latest = null; S.ocAtTarget = null;
     $('#l2Live').style.width = '0'; $('#r2Live').style.width = '0';
     S.slots = null; renderSlots(); renderDevice();
     return;
@@ -436,10 +436,22 @@ async function connect() {
 }
 
 /* ======================= overclock ======================= */
+// Once the controller is measured at the target rate over USB, the overclock steps are folded away.
+function renderOcGuide() {
+  const at = S.ocAtTarget;
+  $('#ocOk').hidden = !at;
+  if (at) $('#ocOkTitle').textContent = `Your controller already runs at ${at} Hz. No overclock needed.`;
+  $('#ocSteps').hidden = !!at && !S.ocShowSteps;
+  $('#ocSteps').classList.toggle('below', !!at);
+  $('#ocShowSteps').textContent = S.ocShowSteps ? 'Hide steps' : 'Show steps anyway';
+}
+
 setInterval(() => {
   if (S.view !== 'overclock') return;
   const st = meter.stats(2000);
   const target = Number($('#target').value);
+  if (st && ctl.transport === 'usb' && st.hz >= target * 0.9 && (st.ctrlHz == null || st.ctrlHz >= target * 0.9)) S.ocAtTarget = Math.round(st.hz / 50) * 50;
+  renderOcGuide();
   const set = (id, v) => { $(id).textContent = v; };
   if (!st) {
     ['#hz', '#ctrlHz', '#sAvg', '#sP99', '#sMax', '#sJit', '#sStale', '#sDrops'].forEach(id => set(id, '—'));
@@ -731,7 +743,8 @@ $('#conflictList').addEventListener('click', e => { if (e.target.closest('[data-
 $('#getTool').onclick = () => api.openLink('hidusbf');
 $('#pickTool').onclick = async () => { const p = await api.pickOcTool(); if (p) { toolPath = p; store.set('ocTool', p); renderTool(); } };
 $('#launchTool').onclick = async () => { const r = await api.launchOcTool(toolPath); if (r) toast(r, 'error'); };
-$('#target').onchange = e => store.set('target', Number(e.target.value));
+$('#target').onchange = e => { store.set('target', Number(e.target.value)); S.ocAtTarget = null; renderOcGuide(); };
+$('#ocShowSteps').onclick = () => { S.ocShowSteps = !S.ocShowSteps; renderOcGuide(); };
 
 $('#pname').addEventListener('input', e => {
   S.work.label = e.target.value;

@@ -144,9 +144,16 @@
 
       <div class="card">
         <div class="card-head"><h2>Overclock over USB</h2><span class="pill" id="ocState">Checking…</span></div>
+        <div class="oc-ok" id="ocOk" hidden>
+          <div><b id="ocOkTitle">Your controller is already at your target rate.</b>
+          <span>There's nothing to download or install. The overclock steps are only for controllers stuck at a lower rate.</span></div>
+          <button class="btn sm ghost" id="ocShowSteps">Show steps anyway</button>
+        </div>
+        <div id="ocSteps">
         <p class="muted">A stock DualSense reports about 250 times a second over USB. Raising that takes a USB filter driver. PadForge works with <b>hidusbf</b>, the driver controller-overclock guides use. You download and install it yourself; PadForge never installs drivers.</p>
         <div class="target-row"><span>Target rate</span>
-          <select id="target"><option value="500">500 Hz</option><option value="1000">1000 Hz</option></select></div>
+          <select id="target"><option value="500">500 Hz</option><option value="1000">1000 Hz</option><option value="2000">2000 Hz</option><option value="4000">4000 Hz</option><option value="8000">8000 Hz</option></select></div>
+        <p class="hint">Above 1000 Hz only works if your controller connects at USB high speed and can produce new data that fast. After overclocking, compare the two numbers at the top. If <b>Fresh data from the controller</b> stays lower than <b>Reports received</b>, the extra reports only repeat old data.</p>
         <ol class="steps">
           <li><div><b>Download hidusbf</b> and unzip it to a permanent folder.</div><button class="btn sm" id="getTool" data-icon="external">Open download page</button></li>
           <li><div><b>Point PadForge at Setup.exe</b> from that folder. <span class="muted path" id="toolPath"></span></div><button class="btn sm" id="pickTool" data-icon="folder">Locate Setup.exe</button></li>
@@ -154,6 +161,7 @@
           <li><div><b>Replug the controller</b>, then run the benchmark above to confirm the new rate.</div></li>
         </ol>
         <p class="hint">Windows Memory Integrity can block unsigned drivers; hidusbf's readme explains the options. Overclocking only affects USB, and you can undo it from the same tool.</p>
+        </div>
       </div>
 
       <div class="card" id="fresh">

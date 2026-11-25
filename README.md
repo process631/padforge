@@ -18,7 +18,7 @@
 ## Download
 
 1. Open the **[latest release](https://github.com/process631/padforge/releases/latest)**.
-2. Download **`PadForge-1.2.0-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.2.0.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
+2. Download **`PadForge-1.2.1-Portable.exe`**. It runs without installing. The **`PadForge-Setup-1.2.1.exe`** download installs PadForge with Start menu and desktop shortcuts instead.
 3. Double-click it. Windows SmartScreen will say *"Windows protected your PC"* because the app isn't code-signed; click **More info â†’ Run anyway**.
 4. Plug in your controller with a USB cable. PadForge connects automatically.
 
@@ -42,7 +42,7 @@ Requires Windows 10 or 11 (64-bit).
 ### Overclock: measure and raise the USB polling rate
 - Live polling rate measured two ways: reports received by your PC, and fresh data according to the controller's own clock. The second number reveals overclocks that only repeat old data.
 - Jitter, 99th percentile, missed and repeated reports, a live graph, and a 10-second benchmark with a before/after baseline.
-- Step-by-step guide for [hidusbf](https://github.com/LordOfMice/hidusbf), the USB filter driver used for controller overclocking, with driver detection. PadForge never installs drivers itself.
+- Step-by-step guide for [hidusbf](https://github.com/LordOfMice/hidusbf), the USB filter driver used for controller overclocking, with driver detection and targets from 500 to 8000 Hz. Above 1000 Hz depends on the controller, and the fresh-data number shows whether the extra speed is real. If your controller already runs at the target rate (the DualSense Edge often reaches 1000 Hz over USB on its own), PadForge says so and hides these steps. PadForge never installs drivers itself.
 - **Fresh start:**
   - Finds leftovers and conflicts on your PC: an old overclock driver, apps that grab the controller (DSX, DS4Windows, reWASD, Steam) and HidHide.
   - Walks you through removing an old overclock safely.

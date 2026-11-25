@@ -136,6 +136,15 @@ export async function runSelfTest({ S, ctl, meter, mock, api, Edge, showView }) 
     check('benchmark measures ~250 Hz', S.bench && S.bench.hz > 150 && S.bench.hz < 400, S.bench?.hz?.toFixed(1));
     check('benchmark sees fresh data at 250 Hz', S.bench && Math.abs(S.bench.ctrlHz - 250) < 3, S.bench?.ctrlHz?.toFixed(2));
     await shot('overclock');
+    check('shows overclock steps at the stock rate', $('#ocOk').hidden && !$('#ocSteps').hidden);
+    S.ocAtTarget = 1000;
+    await wait(400);
+    check('folds the steps away when already at target', !$('#ocOk').hidden && $('#ocSteps').hidden && /1000 Hz/.test($('#ocOkTitle').textContent));
+    $('#ocOk').scrollIntoView();
+    await shot('at-target');
+    $('#ocShowSteps').click();
+    check('can still show the steps', !$('#ocSteps').hidden);
+    $('#ocShowSteps').click();
 
     // Fresh start: conflicts, driver guide, reset everything
     await until(() => /DS4Windows is running/.test($('#conflictList').textContent));
